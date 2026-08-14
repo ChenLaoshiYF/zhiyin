@@ -110,6 +110,14 @@
 - 识别按静音切句：停顿 1.2 秒以上出句，连续不停顿最长 12 秒兜底切分
 - 测试时其他程序的声音会被一起采集（WASAPI 抓整个系统输出），上课时只开网课即可
 
+## 系列项目
+
+纸音是 [ChenLaoshiYF](https://github.com/ChenLaoshiYF) 系列开源项目之一：
+
+- [**yunleng 云棱**](https://github.com/ChenLaoshiYF/yunleng)：摄像头视觉 MCP Server，给 AI Agent 装上眼睛
+- [**mcpguard 明棱**](https://github.com/ChenLaoshiYF/mcpguard)：AI Agent 安全扫描器，检测 MCP 工具投毒
+- [**chening 陈棱**](https://github.com/ChenLaoshiYF/chening)：国赛数模 AI 技能包
+
 ## 测试
 
 - `test_ui.py`：16 项 UI/链路功能回归（含穿透按钮区可点、暂停回调）
