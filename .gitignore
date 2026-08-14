@@ -28,3 +28,6 @@ _ui_shots/
 .vscode/
 .idea/
 *.swp
+
+# 本地 E2E 测试脚本（含本机路径，不上传）
+e2e_shot.ps1
