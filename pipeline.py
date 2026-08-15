@@ -48,7 +48,8 @@ class Pipeline:
                     else os.path.dirname(os.path.abspath(__file__)))
         self._base_dir = base_dir
         # 模型相对路径转绝对：快捷方式/异目录启动时 cwd 不可靠（必须在使用前完成）
-        asr_model = cfg["asr"].get("model", "large-v3-turbo")
+        asr_cfg = cfg.get("asr", {})
+        asr_model = asr_cfg.get("model", "large-v3-turbo")
         if not os.path.isabs(asr_model):
             asr_model = os.path.join(base_dir, asr_model)
         t_cfg = cfg.setdefault("translate", {})
@@ -56,22 +57,23 @@ class Pipeline:
         if not os.path.isabs(local_model):
             t_cfg["local_model"] = os.path.join(base_dir, local_model)
 
+        audio_cfg = cfg.get("audio", {})
         cap = AudioCapture(
-            chunk_sec=cfg["audio"].get("chunk_sec", 0.1),
-            device_hint=cfg["audio"].get("loopback_device", "auto"),
+            chunk_sec=audio_cfg.get("chunk_sec", 0.1),
+            device_hint=audio_cfg.get("loopback_device", "auto"),
         )
         cap.audio_q = self._audio_q
         self.cap = cap
 
         self.asr = ASREngine(
             model=asr_model,
-            device=cfg["asr"].get("device", "auto"),
-            compute_type=cfg["asr"].get("compute_type", "float16"),
-            language=cfg["asr"].get("language", "ru"),
-            beam_size=cfg["asr"].get("beam_size", 1),
-            model_dir=cfg["asr"].get("model_dir", "models"),
-            min_speech_sec=cfg["asr"].get("min_speech_sec", 1.5),
-            silence_sec=cfg["asr"].get("silence_sec", 0.8),
+            device=asr_cfg.get("device", "auto"),
+            compute_type=asr_cfg.get("compute_type", "float16"),
+            language=asr_cfg.get("language", "ru"),
+            beam_size=asr_cfg.get("beam_size", 1),
+            model_dir=asr_cfg.get("model_dir", "models"),
+            min_speech_sec=asr_cfg.get("min_speech_sec", 1.5),
+            silence_sec=asr_cfg.get("silence_sec", 0.8),
         )
         self.asr.bind_audio_queue(self._audio_q)
 
@@ -114,6 +116,11 @@ class Pipeline:
                 executor.shutdown(wait=False, cancel_futures=True)
             except Exception as e:
                 print(f"[流水线] 关闭翻译线程池异常: {e}")
+        # 关闭文稿句柄，确保已写内容完整落盘
+        try:
+            self.writer.close()
+        except Exception as e:
+            print(f"[流水线] 关闭文稿异常: {e}")
 
     def _commit_context(self, seq: int, zh: str):
         """按 seq 顺序提交翻译上下文（并发安全，容忍跳号）。"""

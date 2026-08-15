@@ -169,7 +169,7 @@ def _run_subtitle():
 
     from subtitle_ui import SubtitleWindow
 
-    win = SubtitleWindow(cfg["ui"], pipe.ui_q, writer=pipe.writer)
+    win = SubtitleWindow(cfg.get("ui", {}), pipe.ui_q, writer=pipe.writer)
     win.set_pause_callback(pipe.set_paused)
 
     # 全局热键 Ctrl+Shift+T：穿透/交互切换（穿透时按钮点不到，必须有键盘兜底）
@@ -222,6 +222,12 @@ def _install_hotkey(app, win):
                     _toggle()
                     return True, 0
                 if msg.message == WM_NCHITTEST:
+                    # 只处理字幕窗的消息：穿透模式下其他窗口（弹窗/对话框）必须保持可点
+                    try:
+                        if int(msg.hwnd) != int(win.winId()):
+                            return False, 0
+                    except Exception:
+                        return False, 0
                     # 穿透模式：内容区逐点穿透（HTTRANSPARENT），按钮区保持可点
                     x = ctypes.c_short(msg.lParam & 0xFFFF).value
                     y = ctypes.c_short((msg.lParam >> 16) & 0xFFFF).value

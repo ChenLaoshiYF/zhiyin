@@ -290,6 +290,27 @@ class LocalNLLBTranslator(BaseTranslator):
                 import torch
                 self._device = "cuda" if torch.cuda.is_available() else "cpu"
 
+    def unload(self):
+        """释放模型与 tokenizer，释放显存/内存（切换后端或退出时调用）。"""
+        with self._lock:
+            if self._model is not None:
+                try:
+                    import torch
+                    if torch.cuda.is_available() and hasattr(self._model, "device"):
+                        try:
+                            self._model.cpu()
+                        except Exception:
+                            pass
+                    del self._model
+                    self._model = None
+                    torch.cuda.empty_cache()
+                except Exception as e:
+                    print(f"[NLLB] 释放模型异常: {e}")
+                    self._model = None
+            self._tokenizer = None
+            self._ok = None  # 允许重新加载
+            print("[NLLB] 本地模型已释放")
+
     def translate(self, text: str, system_prompt: str = None) -> str:
         import torch
         if self._model is None or not hasattr(self, "_device"):

@@ -366,6 +366,17 @@ class SubtitleWindow(QWidget):
 
         if len(self.blocks) > MAX_BLOCKS:
             old = self.blocks.pop(0)
+            # 同步清理被移除 block 对应的字典条目（防止 dict 无限增长）
+            removed_seq = None
+            for s, (lbl, _) in list(self._seq_map.items()):
+                if lbl is old or (lbl.parent() is old):
+                    removed_seq = s
+                    break
+            if removed_seq is not None:
+                self._seq_map.pop(removed_seq, None)
+                self._ru_text.pop(removed_seq, None)
+                self._zh_text.pop(removed_seq, None)
+                self._last_partial.pop(removed_seq, None)
             self.blocks_layout.removeWidget(old)
             old.deleteLater()
 
@@ -484,23 +495,24 @@ class SubtitleWindow(QWidget):
 
     def _resize_to_fit(self):
         h = self.container.sizeHint().height() + 56
-        max_h = int(QApplication.primaryScreen().availableGeometry().height() * 0.45)
+        # 使用字幕窗所在屏幕（多显示器下停靠当前屏，而非主屏）
+        screen = (self.screen() or QApplication.primaryScreen()).availableGeometry()
+        max_h = int(screen.height() * 0.45)
         # 有内容时至少显示 4 个句块的高度，无内容保持紧凑
         floor = 240 if self.blocks else 130
         new_h = min(max(h, floor), max_h)
         if self.height() != new_h:
             self.setFixedSize(self.width(), new_h)
         if self._docked and not getattr(self, "_moved", False):
-            screen = QApplication.primaryScreen().availableGeometry()
             x = screen.center().x() - self.width() // 2
-            y = screen.bottom() - self.height() - 84
+            y = screen.bottom() - self.height() - 8  # 可用区域已排除任务栏，仅留 8px 间距
             self.move(x, y)
 
     def _dock_bottom(self):
         self._resize_to_fit()
-        screen = QApplication.primaryScreen().availableGeometry()
+        screen = (self.screen() or QApplication.primaryScreen()).availableGeometry()
         x = screen.center().x() - self.width() // 2
-        y = screen.bottom() - self.height() - 84
+        y = screen.bottom() - self.height() - 8
         self.move(x, y)
         self._docked = True
         self._place_fbuttons()

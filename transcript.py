@@ -16,7 +16,11 @@ class TranscriptWriter:
         if not enabled:
             return
         ts = datetime.datetime.now().strftime("%Y%m%d_%H%M")
-        d = os.path.join(base_dir, transcript_dir)
+        # transcript_dir 可能是绝对路径（用户自选目录）或相对路径（如默认"文稿"）
+        if os.path.isabs(transcript_dir):
+            d = transcript_dir
+        else:
+            d = os.path.join(base_dir, transcript_dir)
         try:
             os.makedirs(d, exist_ok=True)
             self.path = os.path.join(d, f"课堂记录_{ts}.md")

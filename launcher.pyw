@@ -131,8 +131,16 @@ def load_config():
 
 
 def save_config(cfg):
-    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
+    try:
+        with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[配置] 保存失败: {e}")
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, f"保存配置失败：{e}", "纸音", 0x30)
+        except Exception:
+            pass
 
 
 def add_shadow(widget, blur=26, dy=4, alpha=45):
@@ -788,6 +796,17 @@ class Launcher(QWidget):
                 # 打包环境：同一 exe 以 --run 模式启动字幕
                 subprocess.Popen([sys.executable, "--run"], cwd=PROJECT_DIR)
             else:
+                # 开发环境：检查 venv 是否就绪，给出明确提示而非裸报错
+                if not os.path.isfile(VENV_PYTHONW):
+                    QMessageBox.critical(
+                        self, "找不到 Python 环境",
+                        "开发模式需要 venv，但没找到：\n\n"
+                        f"{VENV_PYTHONW}\n\n"
+                        "请先执行：\n"
+                        "  python -m venv .venv\n"
+                        "  .venv\\Scripts\\pip install -r requirements.txt"
+                    )
+                    return
                 subprocess.Popen([VENV_PYTHONW, os.path.join(PROJECT_DIR, "main.py"), "--run"],
                                  cwd=PROJECT_DIR)
             self.lbl_status.setText("●  已启动，字幕窗马上出现")
