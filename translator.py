@@ -332,13 +332,18 @@ class TranslatorManager:
         self.glossary = cfg.get("glossary", {})
         self.refine = t.get("refine", True)  # 独立开关：云端修正本地草稿
         self._ctx_zh = []
+        self._ctx_lock = threading.Lock()
         self._cur = None
 
     def add_context(self, zh: str):
-        """记录近期译文，注入后续翻译保持术语一致（最多 2 句）。"""
-        self._ctx_zh.append(zh)
-        if len(self._ctx_zh) > 2:
-            self._ctx_zh.pop(0)
+        """记录近期译文，注入后续翻译保持术语一致（最多 2 句）。
+
+        调用方（pipeline）保证并发安全：翻译完成结果已在单线程侧按 seq 排序。
+        """
+        with self._ctx_lock:
+            self._ctx_zh.append(zh)
+            if len(self._ctx_zh) > 2:
+                self._ctx_zh.pop(0)
 
     def _system_prompt(self) -> str:
         parts = [_SYSTEM_PROMPT]

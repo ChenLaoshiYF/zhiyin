@@ -52,7 +52,8 @@ def _handle_stop():
         print("没有正在运行的实例")
         sys.exit(0)
     try:
-        pid = int(open(LOCK_PATH, "r").read().strip())
+        with open(LOCK_PATH, "r") as f:
+            pid = int(f.read().strip())
     except Exception:
         print("锁文件损坏，清理后退出")
         os.remove(LOCK_PATH)
@@ -74,7 +75,8 @@ def _check_single_instance() -> bool:
     """已有存活实例时返回 True，阻止重复启动。"""
     if os.path.exists(LOCK_PATH):
         try:
-            pid = int(open(LOCK_PATH, "r").read().strip())
+            with open(LOCK_PATH, "r") as f:
+                pid = int(f.read().strip())
         except Exception:
             pid = -1
         if pid > 0 and _pid_alive(pid):
@@ -123,9 +125,14 @@ def setup_tray(app, win):
 
 
 def load_config():
+    """加载 config.json，损坏/缺失时回退默认配置并提示（不崩溃）。"""
     path = os.path.join(PROJECT_DIR, "config.json")
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"[配置] config.json 读取失败（{e}），使用默认配置")
+        return {}
 
 
 def main():
