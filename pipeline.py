@@ -35,6 +35,11 @@ class Pipeline:
         self._stop = threading.Event()
         self._paused = False
         self._seq = itertools.count(1)
+        # 翻译上下文排序缓冲：并发 worker 完成后按 seq 顺序交给 translator
+        self._ctx_lock = threading.Lock()
+        self._ctx_pending = {}
+        self._ctx_next = 1
+        self._ctx_max_gap = 64  # 跳号超过此值则强制清空（防泄漏）
 
         # 打包后 __file__ 指向临时解压目录，必须用 exe 所在目录做基准，
         # 否则课堂记录写进临时目录，退出即消失
@@ -102,6 +107,31 @@ class Pipeline:
     def stop(self):
         self._stop.set()
         self.cap.stop()
+        # 停止后立即取消未开始的翻译任务；正在执行的等它跑完（或随进程退出）
+        executor = getattr(self, "_executor", None)
+        if executor is not None:
+            try:
+                executor.shutdown(wait=False, cancel_futures=True)
+            except Exception as e:
+                print(f"[流水线] 关闭翻译线程池异常: {e}")
+
+    def _commit_context(self, seq: int, zh: str):
+        """按 seq 顺序提交翻译上下文（并发安全，容忍跳号）。"""
+        with self._ctx_lock:
+            self._ctx_pending[seq] = zh
+            # 顺序提交连续 seq
+            while self._ctx_next in self._ctx_pending:
+                z = self._ctx_pending.pop(self._ctx_next)
+                self.translator.add_context(z)
+                self._ctx_next += 1
+            # 跳号保护：pending 中最早的 seq 落后当前太多，说明中间 seq 被跳过/丢弃
+            if self._ctx_pending:
+                oldest = min(self._ctx_pending)
+                if oldest - self._ctx_next > self._ctx_max_gap:
+                    # 强制按序提交剩余（放弃严格顺序，避免上下文永久挂起）
+                    for s in sorted(self._ctx_pending):
+                        self.translator.add_context(self._ctx_pending.pop(s))
+                    self._ctx_next = max(self._ctx_next, (oldest + 1) if self._ctx_pending else seq + 1)
 
     def _translation_loop(self):
         """消费 ASR 结果：草稿实时上屏，定稿后提交翻译（并行）。"""
@@ -172,6 +202,13 @@ class Pipeline:
         if zh_text.startswith("[译文缺失]") or zh_text.startswith("[翻译失败]"):
             print(f"[文稿] 跳过缺失翻译: {ru_text}")
             return
-        self.translator.add_context(zh_text)
-        self.writer.append(ru_text, zh_text)
+        # 上下文入队（按 seq 排序，容忍跳号，见 _commit_context）
+        try:
+            self._commit_context(seq, zh_text)
+        except Exception as e:
+            print(f"[翻译] 更新上下文失败: {e}")
+        try:
+            self.writer.append(ru_text, zh_text)
+        except Exception as e:
+            print(f"[文稿] 写入失败: {e}")
         print(f"[{time.strftime('%H:%M:%S')}] [翻译] {zh_text}")

@@ -147,7 +147,8 @@ def _instance_running() -> bool:
     if not os.path.exists(LOCK_PATH):
         return False
     try:
-        pid = int(open(LOCK_PATH, "r").read().strip())
+        with open(LOCK_PATH, "r") as f:
+            pid = int(f.read().strip())
     except Exception:
         return False
     import ctypes
