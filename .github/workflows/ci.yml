@@ -1,0 +1,21 @@
+name: ci
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Syntax check (no heavy deps needed)
+        run: |
+          python -m py_compile main.py pipeline.py translator.py asr_engine.py audio_capture.py subtitle_ui.py transcript.py launcher.pyw
