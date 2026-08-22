@@ -1,5 +1,7 @@
 # 纸音 · 俄汉同传（电脑端）
 
+![CI](https://github.com/ChenLaoshiYF/zhiyin/actions/workflows/ci.yml/badge.svg)
+
 > 纸音（Zhiyin），谐音「知音」：老师的俄语透过半透明的字幕纸窗，实时变成你眼前的中文。
 
 俄罗斯老师的网课，讲着讲着就讲到一个没学过的词。低头查词典？抬头老师已经翻页了。截图慢慢翻译？等翻完下一个知识点都过了。
