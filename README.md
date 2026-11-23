@@ -6,6 +6,8 @@
 
 纸音就是干这个的——它把系统里老师的声音抓下来，识别成俄语，翻成中文，一行行浮在屏幕角落。你不用打断节奏，眼睛扫过去就懂了。在 RTX 5070 Laptop（16GB 内存）上实测通过，GPU 加速识别 + 本地草稿毫秒级出字。
 
+[下载纸音源码包](https://github.com/ChenLaoshiYF/zhiyin/releases/latest) · [词汐安卓版 · 背俄语单词](https://github.com/ChenLaoshiYF/Slovo/releases/latest)
+
 ## 原理
 
 ```
